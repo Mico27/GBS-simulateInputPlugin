@@ -4,6 +4,6 @@
 #include <gbdk/platform.h>
 
 void simulate_input_init(UBYTE preserve) BANKED;
-void simulate_input_update(void) NONBANKED;
+void simulate_input_update(void) BANKED;
 
 #endif

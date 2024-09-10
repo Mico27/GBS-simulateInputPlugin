@@ -32,7 +32,7 @@ void simulate_input_init(UBYTE preserve) BANKED {
     }
 }
 
-void simulate_input_update(void) NONBANKED {
+void simulate_input_update(void) BANKED {
     if (!input_sequence_event.script_bank) return;
 	if ((input_sequence_event.handle & SCRIPT_TERMINATED) != 0) {
 		input_sequence_event.script_addr = 0;

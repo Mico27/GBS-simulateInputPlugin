@@ -38,7 +38,7 @@
 extern void __bank_bootstrap_script;
 extern const UBYTE bootstrap_script[];
 
-extern void core_reset_hook(void); 
+extern void core_reset_hook(void);
 
 UBYTE pause_state_update;
 
@@ -55,7 +55,7 @@ void core_reset(void) BANKED {
     actors_init();
     ui_init();
     events_init(FALSE);
-	simulate_input_init(FALSE);
+    simulate_input_init(FALSE);
     timers_init(FALSE);
     music_init_events(FALSE);
 }
@@ -64,24 +64,24 @@ void process_VM(void) {
     while (TRUE) {
         switch (script_runner_update()) {
             case RUNNER_DONE:
-            case RUNNER_IDLE: {                
+            case RUNNER_IDLE: {
                 input_update();
                 if (INPUT_SOFT_RESTART) {
-                    // kill all threads and clear VM memory 
+                    // kill all threads and clear VM memory
                     script_runner_init(TRUE);
-                    // execute bootstrap script              
+                    // execute bootstrap script
                     script_execute(BANK(bootstrap_script), bootstrap_script, 0, 0);
                     break;
                 }
                 if (!VM_ISLOCKED()) {
-					simulate_input_update();
+                    simulate_input_update();
                     if (joy != 0) events_update();                      // update joypad events (must be the first)
                     if (!pause_state_update) state_update();                                     // update current scene, depending on its type
                     if ((game_time & 0x0F) == 0x00) timers_update();    // update timers
                     music_events_update();                              // update music events
                 }
 
-                toggle_shadow_OAM();                
+                toggle_shadow_OAM();
 
                 camera_update();
                 scroll_update();
@@ -122,13 +122,13 @@ void process_VM(void) {
                     case EXCEPTION_CHANGE_SCENE: {
                         // remove previous LCD ISR's
                         remove_LCD_ISRs();
-                        // kill all threads, but don't clear variables 
+                        // kill all threads, but don't clear variables
                         script_runner_init(FALSE);
                         // reset timers on scene change
                         timers_init(FALSE);
                         // reset input events on scene change
                         events_init(FALSE);
-						simulate_input_init(FALSE);
+                        simulate_input_init(FALSE);
                         // reset music events
                         music_init_events(FALSE);
                         // load scene
@@ -159,7 +159,7 @@ void process_VM(void) {
 
                 CRITICAL {
                     switch (scene_LCD_type) {
-                        case LCD_parallax: 
+                        case LCD_parallax:
                             add_LCD(parallax_LCD_isr);
                             break;
                         case LCD_fullscreen:
@@ -171,10 +171,10 @@ void process_VM(void) {
                     }
                     LYC_REG = 0u;
                 }
-                if (!hide_sprites) SHOW_SPRITES;    // show sprites back if we switched LCD ISR while sprites were hidden 
+                if (!hide_sprites) SHOW_SPRITES;    // show sprites back if we switched LCD ISR while sprites were hidden
 
                 pause_state_update = false;
-                
+
                 player_init();
                 state_init();
                 toggle_shadow_OAM();
@@ -197,7 +197,7 @@ void core_run(void) BANKED {
     for (UBYTE i = 4; i != 0; i--) wait_vbl_done(); // this delay is required for PAL SNES
     _is_SGB = sgb_check();
     if (_is_SGB) set_sgb_border(SGB_border_chr, SIZE(SGB_border_chr), BANK(SGB_border_chr),
-                                SGB_border_map, SIZE(SGB_border_map), BANK(SGB_border_map), 
+                                SGB_border_map, SIZE(SGB_border_map), BANK(SGB_border_map),
                                 SGB_border_pal, SIZE(SGB_border_pal), BANK(SGB_border_pal));
     // both CGB + SGB modes at once are not supported
     _is_CGB = ((!_is_SGB) && (_cpu == CGB_TYPE) && (*(UBYTE *)0x0143 & 0x80));
@@ -236,7 +236,7 @@ void core_run(void) BANKED {
         LYC_REG = 0u;
 
         add_VBL(VBL_isr);
-        STAT_REG |= STATF_LYC; 
+        STAT_REG |= STATF_LYC;
 
         music_setup_timer();
         IE_REG |= (TIM_IFLAG | LCD_IFLAG | SIO_IFLAG);

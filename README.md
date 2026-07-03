@@ -19,6 +19,7 @@ The plugin adds two events: one to register and start a simulated-input sequence
 4. [Technicalities and Restrictions](#technicalities-and-restrictions)
 5. [Events Reference](#events-reference)
 6. [Inner Workings](#inner-workings)
+7. [Memory Footprint](#memory-footprint)
 
 ---
 
@@ -287,3 +288,18 @@ if (!VM_ISLOCKED()) {
 
 This ordering ensures that when the simulated joypad value is applied to `joy`, both `events_update` (which fires on-input trigger scripts) and `state_update` (which moves actors and handles player input) see the simulated buttons rather than the real ones.
 
+
+---
+
+## Memory Footprint
+
+Measured against the stock GB Studio **4.3.0-e1** engine (per-file SDCC compile with GB Studio's build flags, default engine settings). Values are the plugin's *delta* versus the stock engine; DMG build, with CGB noted where it differs. ROM cost lands in banked ROM (GB Studio's autobanker spreads it across switchable banks); using the plugin's events additionally compiles a few bytes of GBVM script per call into your project's script banks.
+
+| | Cost |
+|---|---|
+| WRAM | +13 bytes |
+| ROM | +442 bytes |
+
+- **WRAM:** 13 bytes of input-replay state in `simulate_input.c`.
+- **Engine WRAM headroom:** the stock GB Studio 4.3.0 engine leaves about **854 bytes** of WRAM free (usable engine WRAM is 7,776 bytes at 0xC0A0–0xDF00; the stock engine uses 6,922 bytes). With this plugin installed roughly **841 bytes** remain. This figure does not depend on how many global variables your project defines: the script memory array has a fixed size of VM_HEAP_SIZE + (VM_MAX_CONTEXTS × VM_CONTEXT_STACK_SIZE) words — 768 + 16 × 64 = 1,792 words (3,584 bytes) with stock engine settings.
+- **SRAM:** not used.

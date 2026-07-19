@@ -1,0 +1,29 @@
+{
+  "type": "enginePlugin",
+  "name": "Simulate Input Plugin",
+  "author": "Mico27",
+  "url": "https://github.com/Mico27/GBS-simulateInputPlugin",
+  "description": "Allow scripting sequences of simulated inputs.",
+  "license": "MIT",
+  "version": "4.3.0",
+  "gbsVersion": ">=4.3.0",
+  "order": -1,
+  "engineAltRules": [
+    {
+      "when": {
+        "additionalPlugins": [
+          "Mico27/SceneStackExPlugin"
+        ]
+      },
+      "use": "Sce"
+    },
+    {
+      "when": {
+        "additionalPlugins": [
+          "SceneStackExPlugin"
+        ]
+      },
+      "use": "Sce"
+    }
+  ]
+}

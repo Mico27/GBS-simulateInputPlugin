@@ -1,0 +1,86 @@
+{
+  "_resourceType": "scene",
+  "id": "0d943859-b64e-48b6-9e3c-1b570d45ff38",
+  "_index": 0,
+  "name": "Scene 1",
+  "backgroundId": "1e5f9d6a-bdbc-43e6-8c34-22f5bb5dea05",
+  "tilesetId": "",
+  "width": 20,
+  "height": 18,
+  "type": "TOPDOWN",
+  "colorModeOverride": "none",
+  "paletteIds": [],
+  "spritePaletteIds": [],
+  "collisions": "",
+  "autoFadeSpeed": 1,
+  "symbol": "scene_1",
+  "x": 232,
+  "y": 280,
+  "script": [
+    {
+      "command": "EVENT_SET_INPUT_SCRIPT",
+      "args": {
+        "input": [
+          "b"
+        ],
+        "override": true,
+        "__scriptTabs": "press"
+      },
+      "children": {
+        "true": [
+          {
+            "command": "EVENT_SET_VALUE",
+            "args": {
+              "variable": "0",
+              "value": {
+                "type": "number",
+                "value": 1
+              }
+            },
+            "id": "89c43ddb-2872-4e32-95a2-5fb6e80056db"
+          },
+          {
+            "command": "EVENT_START_SIMULATED_INPUTS",
+            "args": {
+              "input_cancel": []
+            },
+            "children": {
+              "input_sequence": [
+                {
+                  "command": "EVENT_SET_SIMULATED_INPUT",
+                  "args": {
+                    "input": [
+                      "a"
+                    ]
+                  },
+                  "id": "fdc23595-d782-4d68-b6fd-f5407688f7a7"
+                },
+                {
+                  "command": "EVENT_IDLE",
+                  "args": {
+                    "__comment": false
+                  },
+                  "id": "ca7cc597-da15-4ac8-850a-d88371f2fc09"
+                },
+                {
+                  "command": "EVENT_SET_SIMULATED_INPUT",
+                  "args": {
+                    "input": [],
+                    "__comment": false
+                  },
+                  "id": "d94fb8c5-8485-4199-9f84-29e76894ddf3"
+                }
+              ],
+              "input_sequence_completed": []
+            },
+            "id": "82230979-119e-4278-9e5c-8dc70740fb73"
+          }
+        ]
+      },
+      "id": "f882c326-3163-4faa-b75d-64d57ca378d5"
+    }
+  ],
+  "playerHit1Script": [],
+  "playerHit2Script": [],
+  "playerHit3Script": []
+}

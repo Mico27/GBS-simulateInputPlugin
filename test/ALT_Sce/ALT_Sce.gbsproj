@@ -1,0 +1,8 @@
+{
+  "_resourceType": "project",
+  "name": "ALT_Sce",
+  "author": "micka",
+  "notes": "SimulateInputPlugin with SceneStackExPlugin — selects engineAlt/Sce.",
+  "_version": "4.2.0",
+  "_release": "10"
+}

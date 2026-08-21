@@ -1,0 +1,8 @@
+{
+  "_resourceType": "project",
+  "name": "ALT_Conf",
+  "author": "micka",
+  "notes": "SimulateInputPlugin with ConfigLoadSavePlugin — selects engineAlt/Conf.",
+  "_version": "4.2.0",
+  "_release": "10"
+}

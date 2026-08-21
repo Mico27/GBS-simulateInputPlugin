@@ -1,0 +1,8 @@
+{
+  "_resourceType": "project",
+  "name": "ALT_Sce_Conf",
+  "author": "micka",
+  "notes": "SimulateInputPlugin with SceneStackExPlugin, ConfigLoadSavePlugin — selects engineAlt/Sce_Conf.",
+  "_version": "4.2.0",
+  "_release": "10"
+}

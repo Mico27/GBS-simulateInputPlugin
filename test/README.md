@@ -10,4 +10,6 @@ file for a scene type the project uses.
 | Project | What it covers |
 |---|---|
 | `DEFAULT` | SimulateInputPlugin on its own, every engine setting at its default. |
+| `ALT_Sce_Conf` | SimulateInputPlugin with SceneStackExPlugin, ConfigLoadSavePlugin — selects engineAlt/Sce_Conf. |
+| `ALT_Conf` | SimulateInputPlugin with ConfigLoadSavePlugin — selects engineAlt/Conf. |
 | `ALT_Sce` | SimulateInputPlugin with SceneStackExPlugin — selects engineAlt/Sce. |

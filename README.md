@@ -1,6 +1,6 @@
 # GBS-simulateInputPlugin
 
-**Version 4.3.0 — Requires GB Studio ≥ 4.3.0**
+**Version 4.3.2 — Requires GB Studio ≥ 4.3.0**
 
 A GB Studio engine plugin that allows scripts to inject a scripted sequence of joypad inputs, temporarily overriding the real physical buttons. This can be used to implement cutscene autopilot, tutorial prompts, replay systems, or any scenario where the game needs to drive itself as if the player were pressing buttons.
 
@@ -45,7 +45,7 @@ A bitmask of physical buttons can be configured on `Start simulated inputs`. Eac
 ## Project Setup
 
 1. Copy the plugin folder into your GB Studio project's `plugins/` directory.
-2. No additional configuration is required.
+2. No additional configuration is required. Compatibility variants are included for use alongside the **SceneStackExPlugin**, the **ConfigLoadSavePlugin**, or both at once, and are selected automatically.
 
 ---
 
@@ -97,9 +97,13 @@ The simulated input state is fully reset on every scene change. Any in-flight se
 
 When using the SceneStackExPlugin compatibility variant, simulated input is **not** reset during push or pop scene stack operations. The sequence continues running as if no scene transition occurred.
 
+### Preserved Across a Game Data Load
+
+With the ConfigLoadSavePlugin compatibility variant, simulated input survives a load the same way: the sequence keeps running, since the plugin's state is not part of any save structure.
+
 ### Modified Engine File
 
-The plugin patches one stock engine file to hook its update into the game loop, so another plugin that also patches that file needs a merged build or a matching compatibility variant.
+The plugin patches `core.c` to hook its update into the game loop, so another plugin that also patches that file needs a merged build or a matching compatibility variant. Two do: SceneStackExPlugin and ConfigLoadSavePlugin, both of which load earlier than this plugin, and variants are included for each and for both together.
 
 ---
 
@@ -183,6 +187,12 @@ Grouped by the date each change was merged into the official
 
 Only bug fixes, new features and feature changes are listed. Engine version
 bumps, patch regeneration, packaging fixes and documentation edits are omitted.
+
+### 2026-08-21
+
+- Added compatibility variants for the **ConfigLoadSavePlugin**, which now
+  patches `core.c` as well — one for it alone and one for it together with the
+  SceneStackExPlugin.
 
 ### 2026-07-19
 

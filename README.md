@@ -1,10 +1,16 @@
 # GBS-simulateInputPlugin
 
-**Version 4.3.2 — Requires GB Studio ≥ 4.3.0**
+**Version 4.3.2. Requires GB Studio 4.3.0 or newer.**
 
-A GB Studio engine plugin that allows scripts to inject a scripted sequence of joypad inputs, temporarily overriding the real physical buttons. This can be used to implement cutscene autopilot, tutorial prompts, replay systems, or any scenario where the game needs to drive itself as if the player were pressing buttons.
+Lets a script press buttons for the player. While the sequence runs, the game behaves as if someone
+were holding those buttons, and the real controller is ignored.
 
-The plugin adds two events: one to register and start a simulated-input sequence, and one to set the buttons that should be held on each frame within that sequence. The real joypad is completely overridden for the duration of the sequence; a configurable set of physical buttons can interrupt and cancel it at any time.
+Use it for a character who walks himself into position at the start of a cutscene, a tutorial that
+demonstrates a move, an attract-mode demo on the title screen, or a boss whose second phase takes
+the controls away from you for a moment.
+
+Two events do the work. One starts a sequence, the other sets which buttons are held. You choose
+which real buttons let the player cancel the sequence.
 
 ![image](https://github.com/user-attachments/assets/b0f5bd71-515e-4094-bd51-9259984e0317)
 ![image](https://github.com/user-attachments/assets/d35be75e-0a0e-462d-9808-fea98e3fe46e)
@@ -17,93 +23,108 @@ The plugin adds two events: one to register and start a simulated-input sequence
 2. [Project Setup](#project-setup)
 3. [Size Limits and Restrictions](#size-limits-and-restrictions)
 4. [Events Reference](#events-reference)
-5. [Memory Footprint](#memory-footprint)
-6. [Bank 0 (HOME) Usage](#bank-0-home-usage)
-7. [Changelog](#changelog)
+5. [FAQ](#faq)
+6. [Memory Footprint](#memory-footprint)
+7. [Bank 0 (HOME) Usage](#bank-0-home-usage)
+8. [Changelog](#changelog)
 
 ---
 
 ## Concepts
 
-### Simulated Input vs Real Input
+### How the override works
 
-Every frame, the GB Studio engine reads the joypad hardware into the `joy` global variable and dispatches it to the joypad-event system (`events_update`) and the current scene state (`state_update`). The simulated-input system hooks into the game loop immediately after the VM has finished its script updates, replacing `joy` and the underlying `joypads.joy0` register with a value set by the active sequence script. From the perspective of all engine code that runs after that point, the simulated input is indistinguishable from a real button press.
+GB Studio reads the controller once per frame and hands the result to everything that cares:
+attached input scripts, the player's movement, menus. This plugin swaps that reading for the one
+your sequence set, just after scripts have run. Everything downstream sees a real button press.
 
-### Sequence Script and Completion Callback
+### The sequence and what follows it
 
-When `Start simulated inputs` is called, two subscripts are registered:
+**Start simulated inputs** registers two scripts.
 
-- **Input sequence** — launched immediately as a concurrent script thread. It runs alongside the rest of the game each frame, advancing one step per game loop. Inside this script, `Set simulated input` events set which buttons are "held" on the coming frame, and `Wait` events advance time.
-- **Input sequence completed** — a single-shot script executed when the input sequence thread terminates naturally (reaches its end). It is not executed if the sequence was cancelled.
+- **Input sequence** starts straight away and runs alongside the rest of the game. Inside it,
+  **Set simulated input** chooses which buttons are held and **Wait** decides for how long.
+- **Input sequence completed** runs once, when the sequence reaches its end. It does not run if the
+  player cancelled.
 
-### Cancel Input
+### Cancelling
 
-A bitmask of physical buttons can be configured on `Start simulated inputs`. Each frame, if any bit of the real, un-overridden joypad matches the cancel mask, the sequence script is forcibly terminated and the completion callback is **not** run.
+**Start simulated inputs** takes a set of buttons that cancel the sequence. Each frame the real
+controller is checked against that set, and a match stops the sequence immediately. The completion
+script does not run.
 
 ---
 
 ## Project Setup
 
-1. Copy the plugin folder into your GB Studio project's `plugins/` directory.
-2. No additional configuration is required. Compatibility variants are included for use alongside the **SceneStackExPlugin**, the **ConfigLoadSavePlugin**, or both at once, and are selected automatically.
+1. Copy the plugin folder into your project's `plugins` folder.
+2. There is nothing to configure. Compatibility variants ship for the **SceneStackEx** and
+   **ConfigLoadSave** plugins, alone or together, and GB Studio picks the right one.
 
----
+### How to use it
 
-### How to Use
+1. Put **Start simulated inputs** where the sequence should begin, for instance a cutscene's On
+   Init script or a trigger.
+2. Choose the **Cancel sequence input** buttons. Pressing any of them for real stops the sequence.
+3. Fill the **Input sequence** block with:
+   - **Set simulated input** to choose which buttons are held from this point on;
+   - **Wait**, in frames or seconds, to hold that state;
+   - as many of each as the sequence needs.
+4. Optionally fill the **Input sequence completed** block with what should happen once the sequence
+   ends on its own.
 
-1. Place a **Start simulated inputs** event where you want the scripted sequence to begin (e.g. the On Init script of a cutscene, or triggered by a trigger/interaction).
-2. Configure the **Cancel sequence input** buttons — any of these pressed by the real player will abort the sequence.
-3. Inside the **Input sequence** sub-event block, add any combination of:
-   - **Set simulated input** — choose which buttons are held starting from this point.
-   - **Wait** (frames or seconds) — hold that button state for the desired duration.
-   - Repeat as needed to build up the full scripted input timeline.
-4. Optionally add events to the **Input sequence completed** sub-event block — these run when the sequence reaches its natural end.
-
-**Example pattern** — move right for 30 frames, then press A:
+**Walk right for half a second, then press A:**
 
 ```
 Start simulated inputs  [cancel: B]
-  ├─ Input sequence:
-  │    Set simulated input  [Right]
-  │    Wait  30 frames
-  │    Set simulated input  [A]
-  │    Wait  10 frames
-  │    Set simulated input  []       ← release all buttons
-  └─ Input sequence completed:
-       ... (optional follow-up script)
+  Input sequence:
+    Set simulated input  [Right]
+    Wait  30 frames
+    Set simulated input  [A]
+    Wait  10 frames
+    Set simulated input  []       <- release everything
+  Input sequence completed:
+    whatever should happen next
 ```
 
 ---
 
 ## Size Limits and Restrictions
 
-### Only One Active Sequence at a Time
+### One sequence at a time
 
-Only one input sequence can be active at a time. If `Start simulated inputs` is called while a sequence is already running, the existing sequence is **immediately terminated** (without firing the completion callback) before the new one starts.
+Calling **Start simulated inputs** while a sequence is running stops the old one immediately,
+without running its completion script, and starts the new one.
 
-### Cancel Uses Real (Un-Overridden) Input
+### Cancelling reads the real controller
 
-The cancel check reads the real joypad before the simulated value is applied, so only genuine physical button presses can cancel the sequence — a simulated button press inside the sequence cannot cancel itself.
+The cancel check happens before the override is applied, so only a genuine button press cancels.
+A simulated press cannot cancel its own sequence.
 
-### Joypad Override Applies After VM Script Updates
+### The override lands on the next frame
 
-The override is applied in the game loop after script updates have run. Script logic that reads the joypad on the same frame as a **Set simulated input** call sees the simulated value only on the *next* frame.
+The override is applied after scripts have run for the frame. A script that reads the controller on
+the same frame as a **Set simulated input** sees the new value on the following frame.
 
-### Cleared on Scene Change
+### Cleared on scene change
 
-The simulated input state is fully reset on every scene change. Any in-flight sequence is terminated.
+Simulated input resets on every scene change, and any running sequence stops.
 
-### Preserved Across SceneStackEx Push/Pop
+### Kept across a SceneStackEx push and pop
 
-When using the SceneStackExPlugin compatibility variant, simulated input is **not** reset during push or pop scene stack operations. The sequence continues running as if no scene transition occurred.
+With the SceneStackEx variant installed, a push or pop does not reset simulated input. The sequence
+carries on as though nothing happened.
 
-### Preserved Across a Game Data Load
+### Kept across a load
 
-With the ConfigLoadSavePlugin compatibility variant, simulated input survives a load the same way: the sequence keeps running, since the plugin's state is not part of any save structure.
+With the ConfigLoadSave variant installed, a load leaves the sequence running, because this
+plugin's state is not part of the save.
 
-### Modified Engine File
+### One stock engine file is replaced
 
-The plugin patches `core.c` to hook its update into the game loop, so another plugin that also patches that file needs a merged build or a matching compatibility variant. Two do: SceneStackExPlugin and ConfigLoadSavePlugin, both of which load earlier than this plugin, and variants are included for each and for both together.
+The plugin changes the main game loop file to hook itself in, so another plugin that changes the
+same file needs a compatibility variant. Two do: SceneStackEx and ConfigLoadSave, and variants ship
+for each and for both together.
 
 ---
 
@@ -111,44 +132,91 @@ The plugin patches `core.c` to hook its update into the game loop, so another pl
 
 ### Start Simulated Inputs
 
-**Event ID:** `EVENT_START_SIMULATED_INPUTS`  
-**Group:** Input
+Group: **Input**.
 
-Registers an input sequence script and a completion callback, then immediately launches the sequence script as a concurrent thread.
+Registers the sequence and its completion script, then starts the sequence immediately.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| Cancel sequence input | Input (buttons) | A, B | Physical buttons that cancel the sequence when pressed. |
-| Input sequence | Events (subscript) | — | The script that runs frame-by-frame to set simulated inputs. Use `Set simulated input` and `Wait` events here. |
-| Input sequence completed | Events (subscript) | — | Script executed once when the input sequence reaches its natural end. Not called on cancellation. |
+| Cancel sequence input | Buttons | A, B | Real buttons that stop the sequence when pressed. |
+| Input sequence | Script | none | Runs frame by frame to set the simulated buttons. Use **Set simulated input** and **Wait** here. |
+| Input sequence completed | Script | none | Runs once when the sequence reaches its end. Skipped if the player cancelled. |
 
-**Notes:**
-- If a sequence is already active when this event fires, the old sequence is terminated first.
-- The input sequence is a true concurrent script — it runs in parallel with the scene's other scripts.
+Notes:
 
----
+- Starting a sequence while one is running stops the old one first.
+- The sequence runs alongside the scene's other scripts.
 
 ### Set Simulated Input
 
-**Event ID:** `EVENT_SET_SIMULATED_INPUT`  
-**Group:** Input
+Group: **Input**.
 
-Sets the simulated button state for the current and subsequent frames. Should be placed inside the **Input sequence** subscript of a `Start simulated inputs` event.
+Sets which buttons are held from now on. Place it inside the **Input sequence** block of a
+**Start simulated inputs** event.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| Input | Input (buttons) | *(none)* | The set of buttons to simulate as held. All unselected buttons are treated as released. |
+| Input | Buttons | none | The buttons to hold. Anything unticked counts as released. |
 
-**Notes:**
-- The value is held until a subsequent `Set simulated input` changes it.
-- An empty selection (no buttons checked) releases all simulated buttons.
-- Combine with `Wait` events to hold a button state for a number of frames.
+Notes:
+
+- The state holds until the next **Set simulated input**.
+- Ticking nothing releases every button.
+- Follow it with a **Wait** to hold the state for a while.
+
+---
+
+## FAQ
+
+**How do I make the player walk into a room on their own at the start of a cutscene?**
+Put **Start simulated inputs** in the scene's On Init script, and inside the sequence hold the
+direction you want with **Set simulated input**, then **Wait** long enough to cover the distance.
+
+**Can I build a demo that plays itself on the title screen?**
+Yes. Start a long sequence on the title scene and set the cancel buttons to Start and A, so any
+real input hands control straight back.
+
+**Does the player keep control while a sequence runs?**
+No. The real controller is ignored except for the cancel buttons.
+
+**How do I know when the sequence has finished?**
+Put your follow-up in the **Input sequence completed** block. It runs when the sequence ends on its
+own, and is skipped when the player cancels.
+
+**How do I tell whether the player cancelled?**
+Set a variable at the end of the sequence and check it in the completion script, or set one before
+starting and clear it in the completion block. A cancelled sequence never reaches either.
+
+**Can two sequences run at once?**
+No. Starting a new one stops the old one immediately, and the old one's completion script does not
+run.
+
+**Why does my script not see the simulated button on the same frame?**
+The override is applied after scripts have run for the frame, so the new value is visible on the
+next one. Add a short **Wait** after **Set simulated input**.
+
+**Can a simulated button press cancel its own sequence?**
+No. Cancelling checks the real controller only.
+
+**Does the sequence survive a scene change?**
+No. It stops, and simulated input resets. With the SceneStackEx variant a push or pop keeps it
+running, and with the ConfigLoadSave variant a load does too.
+
+**Does it clash with other plugins?**
+It replaces the main game loop file. SceneStackEx and ConfigLoadSave do too, and compatibility
+variants ship for both, alone and together. Another plugin changing that file needs merging by
+hand.
+
+**Can I simulate holding two buttons at once?**
+Yes. Tick every button you want held in one **Set simulated input**.
 
 ---
 
 ## Memory Footprint
 
-Measured against the stock GB Studio **4.3.0-e1** engine by `measure_plugin_memory.js` (per-file SDCC compile with GB Studio's own build flags, at default engine settings; report of 2026-08-13). Figures are this plugin's *delta* versus stock — a file that replaces a stock engine file counts only the difference, which is why a plugin can come out negative. Using the plugin's events additionally compiles a few bytes of GBVM script per call into your project's script banks, on top of the fixed cost below.
+Measured against the stock GB Studio **4.3.0-e1** engine at default engine settings, report of
+2026-08-13. Figures are the difference against a stock project. Each event you use also compiles a
+few bytes of script into your project, on top of the fixed cost below.
 
 | Budget | Cost |
 |---|---|
@@ -156,10 +224,13 @@ Measured against the stock GB Studio **4.3.0-e1** engine by `measure_plugin_memo
 | WRAM | +13 bytes |
 | Banked ROM | +456 bytes |
 
-- **Bank 0:** nothing. Every function the plugin adds is compiled into a switchable ROM bank.
-- **WRAM:** 13 bytes of input-replay state.
-- **Banked ROM:** 456 bytes, net of the stock `core.c` the plugin replaces.
-- **Engine WRAM headroom:** a stock GB Studio 4.3.0 project leaves about **854 bytes** of WRAM free (usable engine WRAM is 7,776 bytes at 0xC0A0–0xDF00; the stock engine uses 6,922). With this plugin installed roughly **841 bytes** remain. That does not change with the number of global variables your project defines: the script memory array is a fixed 3,584 bytes at stock engine settings (VM_HEAP_SIZE + VM_MAX_CONTEXTS × VM_CONTEXT_STACK_SIZE = 768 + 16 × 64 words).
+- **Bank 0:** nothing. Everything the plugin adds is compiled into a switchable ROM bank.
+- **WRAM:** 13 bytes to track the running sequence.
+- **Banked ROM:** 456 bytes, after subtracting the stock game loop file the plugin replaces.
+- **Engine WRAM headroom:** a stock GB Studio 4.3.0 project leaves about **854 bytes** of WRAM
+  free (the engine has 7,776 bytes to work with and uses 6,922 of them). With this plugin
+  installed roughly **841 bytes** remain. Adding more global variables to your project does not
+  change that figure, because script memory is a fixed 3,584 byte block at stock engine settings.
 - **SRAM:** not used.
 
 ---
@@ -167,17 +238,16 @@ Measured against the stock GB Studio **4.3.0-e1** engine by `measure_plugin_memo
 <!-- BANK0:BEGIN -->
 ## Bank 0 (HOME) Usage
 
-Bank 0 is the 16 KB non-switchable ROM bank that the GB Studio engine core,
-the interrupt handlers and the GBDK runtime all share. Banked ROM is cheap
-(add another bank), bank 0 is not, so it is usually the first thing a project
-runs out of.
+Bank 0 is the 16 KB fixed ROM bank shared by the GB Studio engine core, the
+interrupt handlers and the GBDK runtime. Extra banked ROM is cheap to add,
+bank 0 is not, so bank 0 is usually the first thing a project runs out of.
 
 | | Bytes |
 |---|---|
 | Bank 0 used by this plugin | **0** |
 
-**This plugin costs nothing in bank 0.** Every one of its functions is compiled
-into a switchable ROM bank; nothing it adds is resident in bank 0.
+**This plugin costs nothing in bank 0.** Everything it adds is compiled into a
+switchable ROM bank.
 <!-- BANK0:END -->
 
 ## Changelog
@@ -185,18 +255,17 @@ into a switchable ROM bank; nothing it adds is resident in bank 0.
 Grouped by the date each change was merged into the official
 [gb-studio-plugins](https://github.com/gb-studio-dev/gb-studio-plugins) repository.
 
-Only bug fixes, new features and feature changes are listed. Engine version
-bumps, patch regeneration, packaging fixes and documentation edits are omitted.
+Only bug fixes, new features and feature changes are listed. Engine version bumps, patch
+regeneration, packaging fixes and documentation edits are omitted.
 
 ### 2026-08-21
 
-- Added compatibility variants for the **ConfigLoadSavePlugin**, which now
-  patches `core.c` as well — one for it alone and one for it together with the
-  SceneStackExPlugin.
+- Added compatibility variants for the **ConfigLoadSavePlugin**, which now changes the main game
+  loop file too: one for it alone and one for it together with the SceneStackExPlugin.
 
 ### 2026-07-19
 
-- Fixed `joy_pressed` not being updated, which broke "just pressed" checks.
+- Fixed the "just pressed" state not updating, which broke checks for a button press.
 
 ### 2025-02-24
 
